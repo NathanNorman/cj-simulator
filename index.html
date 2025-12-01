@@ -623,12 +623,14 @@
                         winPhase = 'landing';
 
                         // Find a mountain peak position - pick one near center of screen
-                        // Mountains canvas positioning (matches CSS and resizeCanvases logic)
+                        // Mountains canvas positioning (matches CSS: bottom 30%, height 50% on desktop)
                         const w = window.innerWidth;
                         const h = window.innerHeight;
                         const isMobileLandscape = w <= 900 && w > h;
-                        const mountainsCanvasTop = isMobileLandscape ? h * 0.45 : h * 0.50;
+                        // CSS: bottom 30% height 50% = top at 20%, or mobile bottom 25% height 55% = top at 20%
                         const mountainsCanvasHeight = isMobileLandscape ? h * 0.55 : h * 0.50;
+                        const mountainsCanvasBottom = isMobileLandscape ? h * 0.25 : h * 0.30;
+                        const mountainsCanvasTop = h - mountainsCanvasBottom - mountainsCanvasHeight;
 
                         // Mountain data (same as in drawMountains)
                         const mountainData = [
