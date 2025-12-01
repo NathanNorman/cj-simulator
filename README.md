@@ -1,234 +1,69 @@
-# Sprite Animator
+# C & J Simulator
 
-A Python tool for converting sprite sheets into animations. Supports both animated GIF output and HTML/CSS animations.
+A fun browser-based game featuring Jude bouncing on a trampoline! Works on desktop and mobile.
+
+## Play the Game
+
+**Live Demo:** [Play Now](https://nathannorman.github.io/cj-simulator/)
+
+## How to Play
+
+### Desktop (Keyboard)
+- **Arrow Keys**: Move left/right
+- **Up Arrow**: Jump
+- **Shift + Arrows**: Move faster
+
+### Mobile (Touch)
+- **Left/Right Buttons**: Move
+- **Jump Button**: Jump
+- Rotate device to landscape mode for best experience
+
+### Goal
+Bounce on the trampoline 7 times in a row to win! Each bounce makes you go higher.
 
 ## Features
 
-- 🎬 Convert horizontal sprite sheets to animated GIFs
-- 🌐 Generate HTML/CSS sprite animations
-- ⚡ Fast, optimized output
-- 🎨 Pixel-perfect rendering with configurable frame timing
-- 🔧 Both CLI and Python API
+- Parallax scrolling backgrounds (mountains, hills, ground)
+- Walk and jump sprite animations
+- Physics-based trampoline with increasing bounce height
+- Screen shake and visual effects on big bounces
+- Win animation with character landing on mountain peak
+- Fully responsive - works on desktop and mobile
+- Touch controls for mobile play
 
-## Installation
+## Deploy to GitHub Pages
 
-### For Users
+1. Push this repo to GitHub
+2. Go to **Settings > Pages**
+3. Under "Source", select **Deploy from a branch**
+4. Select **main** branch and **/ (root)** folder
+5. Click **Save**
+6. Your game will be live at `https://YOUR-USERNAME.github.io/REPO-NAME/`
 
-```bash
-pip install -e .
-```
+## Files
 
-### For Development
-
-```bash
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Install pre-commit hooks (optional)
-pre-commit install
-```
-
-## Quick Start
-
-### Command Line
-
-```bash
-# Basic usage (creates animated GIF with 6 frames, 100ms each)
-sprite-animator walk_sprite.png
-
-# Specify output filename and frame count
-sprite-animator walk_sprite.png -o walk.gif -n 8
-
-# Adjust animation speed (50ms = faster)
-sprite-animator walk_sprite.png -d 50
-
-# Create HTML/CSS animation
-sprite-animator walk_sprite.png --format html -o walk.html
-
-# Create both formats
-sprite-animator walk_sprite.png --format both
-
-# Get sprite sheet info
-sprite-animator walk_sprite.png --info
-```
-
-### Python API
-
-```python
-from sprite_animator import SpriteAnimator
-
-# Load sprite sheet
-animator = SpriteAnimator("walk_sprite.png")
-
-# Create animated GIF
-animator.create_gif(
-    "output.gif",
-    num_frames=6,
-    duration=100,  # milliseconds per frame
-    loop=0  # 0 = infinite loop
-)
-
-# Create HTML/CSS animation
-animator.create_sprite_sheet_html(
-    "output.html",
-    num_frames=6,
-    frame_duration=100,
-    scale=2  # 2x display size
-)
-
-# Get sprite sheet info
-info = animator.get_info()
-print(f"Dimensions: {info['width']}x{info['height']}")
-```
-
-## Requirements
-
-- Python 3.8+
-- Pillow (PIL) 10.0.0+
-
-## Project Structure
-
-```
-sprite-animator/
-├── src/
-│   └── sprite_animator/
-│       ├── __init__.py      # Package initialization
-│       ├── animator.py      # Core SpriteAnimator class
-│       └── cli.py           # Command-line interface
-├── pyproject.toml           # Project configuration
-├── README.md                # This file
-└── .gitignore              # Git ignore rules
-```
-
-## CLI Options
-
-```
-usage: sprite-animator [-h] [-o OUTPUT] [-n NUM_FRAMES] [-d DURATION]
-                       [--format {gif,html,both}] [--no-loop] [--no-optimize]
-                       [--scale SCALE] [--info] [--version]
-                       sprite_sheet
-
-Convert sprite sheets into animations (GIF, HTML/CSS)
-
-positional arguments:
-  sprite_sheet          Path to the sprite sheet image
-
-options:
-  -h, --help            show this help message and exit
-  -o OUTPUT, --output OUTPUT
-                        Output filename (default: animation.gif or animation.html)
-  -n NUM_FRAMES, --num-frames NUM_FRAMES
-                        Number of frames in the sprite sheet (default: 6)
-  -d DURATION, --duration DURATION
-                        Duration of each frame in milliseconds (default: 100)
-  --format {gif,html,both}
-                        Output format (default: gif)
-  --no-loop             Don't loop the GIF animation (play once)
-  --no-optimize         Don't optimize the GIF file size
-  --scale SCALE         Display scale for HTML output (default: 2)
-  --info                Show sprite sheet info and exit
-  --version             show program's version number and exit
-```
+| File | Description |
+|------|-------------|
+| `index.html` | Main game (mobile + desktop) |
+| `jude-demo.html` | Development version |
+| `sprite-editor.html` | Tool for editing sprite frames |
+| `jude-spritesheet.png` | Walk animation sprite sheet |
+| `jude-jump-transparent.png` | Jump animation sprite sheet |
 
 ## Development
 
-### Code Quality Tools
+This is a single HTML file game with no build process. Just edit and refresh!
 
-The project uses modern Python tooling:
+### Tools Included
 
-- **black**: Code formatting (100 char line length)
-- **ruff**: Fast linting (replaces flake8, isort)
-- **mypy**: Static type checking
-- **pytest**: Testing framework
+- **Sprite Editor** (`sprite-editor.html`): Visual tool for defining animation frames on sprite sheets
+- **GIF Creator** (`create_gif_from_json.py`): Python script to create GIFs from frame data
 
-```bash
-# Format code
-black src/
+## Credits
 
-# Lint code
-ruff check src/
-
-# Type check
-mypy src/
-
-# Run tests (when added)
-pytest
-```
-
-### Adding Tests
-
-Tests should be placed in a `tests/` directory:
-
-```bash
-mkdir tests
-# Add test_*.py files
-pytest
-```
-
-## How It Works
-
-### Sprite Sheet Format
-
-The tool expects a **horizontal sprite sheet** where each frame is placed side-by-side:
-
-```
-[Frame 1][Frame 2][Frame 3][Frame 4][Frame 5][Frame 6]
-```
-
-The sprite sheet width should be evenly divisible by the number of frames for best results.
-
-### GIF Creation
-
-1. Loads the sprite sheet image
-2. Calculates frame width (total_width / num_frames)
-3. Extracts each frame by cropping
-4. Combines frames into an animated GIF with specified timing
-5. Optimizes the output (optional)
-
-### HTML/CSS Animation
-
-1. References the original sprite sheet image
-2. Uses CSS `background-position` animation
-3. `steps()` timing function for pixel-perfect frame changes
-4. Hardware-accelerated, smooth playback
-
-## Troubleshooting
-
-### "Package not found" when installing
-
-Make sure you're in the project directory and using Python 3.8+:
-
-```bash
-python --version  # Should be 3.8 or higher
-pip install -e .
-```
-
-### Frames look misaligned
-
-The sprite sheet width must be evenly divisible by the number of frames. Check your sprite sheet dimensions:
-
-```bash
-sprite-animator your_sprite.png --info
-```
-
-### HTML animation not showing sprite
-
-The HTML file references the sprite sheet by filename. Make sure both files are in the same directory.
-
-## Contributing
-
-This is a personal project, but suggestions and improvements are welcome!
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+- Game and animations by Nathan Norman
+- Character art: Jude
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Author
-
-Nathan Norman (nathannorman@gmail.com)
+MIT License

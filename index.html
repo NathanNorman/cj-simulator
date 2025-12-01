@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="screen-orientation" content="landscape">
+    <title>C & J Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Parallax layers */
+        .parallax-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #sky {
+            background: linear-gradient(180deg, #4a90d9 0%, #87CEEB 50%, #b8d4e8 100%);
+        }
+
+        #mountains {
+            bottom: 30%;
+            top: auto;
+            height: 40%;
+        }
+
+        #hills {
+            bottom: 20%;
+            top: auto;
+            height: 35%;
+        }
+
+        #ground {
+            bottom: 0;
+            top: auto;
+            height: 25%;
+            background: linear-gradient(180deg, #4a7c23 0%, #3d6b1e 50%, #2d5016 100%);
+        }
+
+        #ground-details {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #terrain {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        #character {
+            position: absolute;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            z-index: 50;
+        }
+
+        #character.walk {
+            width: var(--walk-width, 108px);
+            height: var(--walk-height, 177px);
+            background-image: url('jude-spritesheet.png');
+            background-size: var(--walk-bg-width, 432px) var(--walk-bg-height, 592px);
+        }
+
+        #character.jump {
+            width: var(--jump-width, 95px);
+            height: var(--jump-height, 270px);
+            background-image: url('jude-jump-transparent.png');
+            background-size: var(--jump-bg-width, 380px) var(--jump-bg-height, 631px);
+        }
+
+        #character.facing-left {
+            transform: scaleX(-1);
+        }
+
+        #character.jump.facing-left {
+            transform: scaleX(-1);
+        }
+
+        .trampoline {
+            position: absolute;
+            z-index: 45;
+        }
+
+        .trampoline-base {
+            width: 600px;
+            height: 150px;
+            background: linear-gradient(180deg, #444 0%, #222 100%);
+            border-radius: 25px;
+            position: relative;
+        }
+
+        .trampoline-leg {
+            position: absolute;
+            width: 40px;
+            height: 125px;
+            background: #333;
+            bottom: -125px;
+        }
+
+        .trampoline-leg.left {
+            left: 75px;
+        }
+
+        .trampoline-leg.right {
+            right: 75px;
+        }
+
+        .trampoline-surface {
+            position: absolute;
+            top: -40px;
+            left: 25px;
+            right: 25px;
+            height: 60px;
+            background: linear-gradient(180deg, #1e90ff 0%, #0066cc 100%);
+            border-radius: 50%;
+            transition: transform 0.1s ease-out;
+        }
+
+        .trampoline-surface.compressed {
+            transform: scaleY(0.5) translateY(40px);
+        }
+
+        .trampoline-spring {
+            position: absolute;
+            width: 20px;
+            height: 75px;
+            background: repeating-linear-gradient(
+                0deg,
+                #888 0px,
+                #888 10px,
+                #666 10px,
+                #666 20px
+            );
+            top: -25px;
+        }
+
+        .trampoline-spring:nth-child(2) { left: 100px; }
+        .trampoline-spring:nth-child(3) { left: 225px; }
+        .trampoline-spring:nth-child(4) { left: 350px; }
+        .trampoline-spring:nth-child(5) { right: 100px; }
+
+        #win-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        #win-screen h1 {
+            font-size: 80px;
+            color: #ffd700;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.8);
+            margin-bottom: 20px;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        #win-screen p {
+            font-size: 24px;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        #character.in-mountains {
+            z-index: 200 !important;
+            position: fixed !important;
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        #instructions kbd {
+            background: #444;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 0 3px;
+        }
+
+        #position {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 100;
+        }
+
+        /* Terrain objects */
+        .terrain-object {
+            position: absolute;
+            bottom: 0;
+        }
+
+        .tree {
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 60px solid #2d5a1d;
+        }
+
+        .tree::before {
+            content: '';
+            position: absolute;
+            top: 60px;
+            left: -5px;
+            width: 10px;
+            height: 20px;
+            background: #5c4033;
+        }
+
+        .bush {
+            width: 40px;
+            height: 25px;
+            background: #3d7a2a;
+            border-radius: 50% 50% 40% 40%;
+        }
+
+        .rock {
+            width: 30px;
+            height: 20px;
+            background: #7a7a7a;
+            border-radius: 40% 50% 45% 55%;
+        }
+
+        .flower {
+            width: 8px;
+            height: 8px;
+            background: #ff6b9d;
+            border-radius: 50%;
+        }
+
+        .flower::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 3px;
+            width: 2px;
+            height: 10px;
+            background: #228B22;
+        }
+
+        /* Mobile touch controls */
+        #touch-controls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 180px;
+            z-index: 500;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(255, 255, 255, 0.5);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        #btn-left {
+            left: 20px;
+            bottom: 50px;
+        }
+
+        #btn-right {
+            left: 110px;
+            bottom: 50px;
+        }
+
+        #btn-jump {
+            right: 30px;
+            bottom: 50px;
+            width: 90px;
+            height: 90px;
+            font-size: 36px;
+        }
+
+        /* Landscape orientation lock overlay */
+        #rotate-device {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            z-index: 10000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #rotate-device .rotate-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: rotate-hint 2s ease-in-out infinite;
+        }
+
+        @keyframes rotate-hint {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+
+        /* Show touch controls and rotation warning only on touch devices */
+        @media (pointer: coarse) {
+            #touch-controls {
+                display: block;
+            }
+
+            #instructions {
+                display: none;
+            }
+
+            #position {
+                font-size: 10px;
+                padding: 5px 10px;
+            }
+        }
+
+        @media (pointer: coarse) and (orientation: portrait) {
+            #rotate-device {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Parallax background layers -->
+        <div id="sky" class="parallax-layer"></div>
+        <canvas id="mountains" class="parallax-layer"></canvas>
+        <canvas id="hills" class="parallax-layer"></canvas>
+        <div id="ground" class="parallax-layer">
+            <canvas id="ground-details"></canvas>
+        </div>
+
+        <!-- Terrain layer with objects -->
+        <div id="terrain"></div>
+
+        <!-- Trampoline -->
+        <div id="trampoline" class="trampoline">
+            <div class="trampoline-surface" id="trampolineSurface"></div>
+            <div class="trampoline-spring"></div>
+            <div class="trampoline-spring"></div>
+            <div class="trampoline-spring"></div>
+            <div class="trampoline-spring"></div>
+            <div class="trampoline-base">
+                <div class="trampoline-leg left"></div>
+                <div class="trampoline-leg right"></div>
+            </div>
+        </div>
+
+        <!-- Character -->
+        <div id="character"></div>
+    </div>
+
+    <div id="win-screen">
+        <h1>YOU WIN!</h1>
+        <p>Refresh to play again</p>
+    </div>
+
+    <div id="position">X: 0, Y: 0</div>
+
+    <div id="instructions">
+        Use <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> arrow keys to move
+        &nbsp;|&nbsp;
+        <kbd>Shift</kbd> + arrows to move faster
+    </div>
+
+    <!-- Mobile touch controls -->
+    <div id="touch-controls">
+        <div id="btn-left" class="touch-btn">←</div>
+        <div id="btn-right" class="touch-btn">→</div>
+        <div id="btn-jump" class="touch-btn">↑</div>
+    </div>
+
+    <!-- Rotate device overlay -->
+    <div id="rotate-device">
+        <div class="rotate-icon">📱</div>
+        <div>Please rotate your device to landscape mode</div>
+    </div>
+
+    <script>
+        const character = document.getElementById('character');
+        const positionDisplay = document.getElementById('position');
+        const terrain = document.getElementById('terrain');
+        const mountainsCanvas = document.getElementById('mountains');
+        const hillsCanvas = document.getElementById('hills');
+        const groundDetails = document.getElementById('ground-details');
+
+        // Walk animation frames (scaled 50%)
+        const walkScale = 0.5;
+        const walkFrames = [
+            { x: 0, y: 132, width: 216, height: 354 },
+            { x: 216, y: 132, width: 216, height: 354 },
+            { x: 432, y: 132, width: 216, height: 354 },
+            { x: 648, y: 132, width: 216, height: 354 },
+            { x: 432, y: 491, width: 216, height: 354 },
+            { x: 648, y: 491, width: 216, height: 354 }
+        ];
+
+        // Jump animation frames (scaled 25% to match walk size roughly)
+        const jumpScale = 0.25;
+        const jumpFrames = [
+            { x: 27, y: 171, width: 400, height: 1136 },
+            { x: 836, y: 171, width: 400, height: 1136 },
+            { x: 1200, y: 171, width: 400, height: 1136 },
+            { x: 27, y: 1307, width: 400, height: 1136 },
+            { x: 427, y: 1307, width: 400, height: 1136 },
+            { x: 827, y: 1307, width: 400, height: 1136 },
+            { x: 1200, y: 1307, width: 400, height: 1136 }
+        ];
+
+        // World position (infinite scrolling)
+        let worldX = 0;
+        let worldY = 0;
+        let speed = 12;
+        let fastSpeed = 28;
+        let facingLeft = false;
+
+        // Animation state
+        let currentFrame = 0;
+        let isMoving = false;
+        let isJumping = false;
+        let jumpFrame = 0;
+        let animationTimer = 0;
+        const walkFrameDelay = 85;
+        const jumpFrameDelay = 100;
+        let lastTime = 0;
+        let idleTimer = 0;
+        const idleDelay = 1000;
+        const idleFrame = 4;
+
+        // Responsive scaling factor based on viewport
+        const baseViewportWidth = 1200; // Design reference width
+        function getResponsiveScale() {
+            // Scale down on smaller screens, but don't scale up beyond 1
+            return Math.min(1, Math.max(0.5, window.innerWidth / baseViewportWidth));
+        }
+        let responsiveScale = getResponsiveScale();
+
+        // Character dimensions (scaled) - walk is default
+        // Base sizes before responsive scaling
+        const baseWalkWidth = 108;
+        const baseWalkHeight = 177;
+        const baseJumpWidth = 95;
+        const baseJumpHeight = 270;
+
+        // Actual sizes (will be updated on resize)
+        let walkWidth = baseWalkWidth * responsiveScale;
+        let walkHeight = baseWalkHeight * responsiveScale;
+        let jumpWidth = baseJumpWidth * responsiveScale;
+        let jumpHeight = baseJumpHeight * responsiveScale;
+
+        // Physics
+        let charY = 0; // Character Y position (0 = ground, positive = up)
+        let velocityY = 0;
+        const gravity = -0.8;
+        const jumpVelocity = 18;
+        let isInAir = false;
+        let canJump = true;
+
+        // Trampoline
+        const trampolineEl = document.getElementById('trampoline');
+        const trampolineSurface = document.getElementById('trampolineSurface');
+        const trampolineWorldX = 800; // Position to the right of start
+        const baseTrampolineWidth = 600;
+        const baseTrampolineHeight = 250;
+        let trampolineWidth = baseTrampolineWidth * responsiveScale;
+        let trampolineHeight = baseTrampolineHeight * responsiveScale;
+        let bounceMultiplier = 1;
+        let lastBounceTime = 0;
+        const bounceDecayTime = 2000; // ms before bounce multiplier resets
+        let screenShake = 0;
+        const gameContainer = document.getElementById('game-container');
+        let bounceCount = 0;
+        let hasWon = false;
+        let winAnimation = false;
+        let winAnimationProgress = 0;
+
+        function shakeScreen(intensity) {
+            screenShake = intensity;
+        }
+
+        function triggerWin() {
+            hasWon = true;
+            winAnimation = true;
+            winPhase = 'launching';
+
+            // Big bounce to launch super high
+            velocityY = 150;
+            charY = 100; // trampolineTop value
+            isInAir = true;
+            isJumping = true;
+            setAnimationMode('jump');
+            setJumpFrame(0);
+        }
+
+        let winPhase = null;
+        let winLaunchHeight = 0;
+
+        function updateWinAnimation(deltaTime) {
+            if (winPhase === 'launching') {
+                // Apply weaker gravity so character goes really high
+                velocityY += gravity * 0.3;
+                charY += velocityY;
+                winLaunchHeight = Math.max(winLaunchHeight, charY);
+
+                // Update jump animation frame based on velocity
+                if (velocityY > 10) {
+                    setJumpFrame(0);
+                } else if (velocityY > 0) {
+                    setJumpFrame(1);
+                } else {
+                    setJumpFrame(3);
+                }
+
+                // Update character position while launching
+                const charWidth = jumpWidth;
+                const charHeight = jumpHeight;
+                const screenX = (window.innerWidth - charWidth) / 2;
+                const groundY = window.innerHeight - window.innerHeight * 0.15;
+                const screenY = groundY - charHeight - charY;
+                character.style.left = screenX + 'px';
+                character.style.top = screenY + 'px';
+
+                // Character goes off top of screen (or high enough)
+                if (screenY < -50 || charY > 1500) {
+                    winPhase = 'offscreen';
+                    character.style.display = 'none';
+
+                    // Wait a moment then show character on mountain
+                    setTimeout(() => {
+                        winPhase = 'landing';
+
+                        // Find a mountain peak position - pick one near center of screen
+                        // Mountains canvas: bottom 30%, height 40% of screen
+                        const mountainsCanvasTop = window.innerHeight * 0.30;
+                        const mountainsCanvasHeight = window.innerHeight * 0.40;
+
+                        // Mountain data (same as in drawMountains)
+                        const mountainData = [
+                            { x: 0, height: 0.7, width: 400 },
+                            { x: 300, height: 0.9, width: 500 },
+                            { x: 700, height: 0.6, width: 350 },
+                            { x: 1000, height: 0.8, width: 450 },
+                            { x: 1400, height: 0.65, width: 380 },
+                        ];
+                        const cycleWidth = 1800;
+                        const parallaxOffset = worldX * 0.1; // parallaxSpeeds.mountains
+
+                        // Find which mountain is closest to screen center
+                        const screenCenterX = window.innerWidth / 2;
+                        let bestMountain = null;
+                        let bestDistance = Infinity;
+
+                        mountainData.forEach(m => {
+                            let baseX = m.x - (parallaxOffset % cycleWidth);
+                            // Check multiple wrap positions
+                            for (let shift = -cycleWidth; shift <= cycleWidth * 2; shift += cycleWidth) {
+                                const peakX = baseX + shift + m.width / 2;
+                                const dist = Math.abs(peakX - screenCenterX);
+                                if (dist < bestDistance && peakX > 100 && peakX < window.innerWidth - 100) {
+                                    bestDistance = dist;
+                                    bestMountain = { ...m, peakX };
+                                }
+                            }
+                        });
+
+                        // Use the best mountain, or fallback to center
+                        const peakYInCanvas = mountainsCanvasHeight * (1 - bestMountain.height);
+                        const peakScreenY = mountainsCanvasTop + peakYInCanvas;
+                        const peakScreenX = bestMountain.peakX;
+
+                        // Scale factor for tiny character
+                        const tinyScale = 0.15;
+                        const tinyWidth = Math.round(216 * tinyScale);
+                        const tinyHeight = Math.round(354 * tinyScale);
+                        const tinyBgWidth = Math.round(864 * tinyScale);
+                        const tinyBgHeight = Math.round(1184 * tinyScale);
+                        const frameX = Math.round(432 * tinyScale);
+                        const frameY = Math.round(491 * tinyScale);
+
+                        const landingX = peakScreenX - tinyWidth / 2;
+                        const landingY = peakScreenY - tinyHeight + 15;
+
+                        character.style.cssText = `
+                            position: fixed !important;
+                            display: block !important;
+                            width: ${tinyWidth}px !important;
+                            height: ${tinyHeight}px !important;
+                            background-image: url('jude-spritesheet.png') !important;
+                            background-size: ${tinyBgWidth}px ${tinyBgHeight}px !important;
+                            background-position: -${frameX}px -${frameY}px !important;
+                            background-repeat: no-repeat !important;
+                            image-rendering: pixelated !important;
+                            left: ${landingX}px !important;
+                            top: -100px !important;
+                            z-index: 9999 !important;
+                        `;
+
+                        setTimeout(() => {
+                            character.style.transition = 'top 1.5s ease-in';
+                            character.style.top = landingY + 'px';
+
+                            setTimeout(() => {
+                                winPhase = 'done';
+                                document.getElementById('win-screen').style.display = 'flex';
+                            }, 1700);
+                        }, 100);
+                    }, 800);
+                }
+            }
+        }
+
+        // Track pressed keys
+        const keys = {};
+
+        // Parallax speeds (0 = stationary, 1 = moves with world)
+        const parallaxSpeeds = {
+            mountains: 0.1,
+            hills: 0.3,
+            ground: 0.7,
+            terrain: 1.0
+        };
+
+        // Terrain objects (generated procedurally)
+        const terrainObjects = [];
+        const terrainSpacing = 150;
+        const terrainRange = 5000; // How far to generate terrain
+
+        function generateTerrainObjects() {
+            terrainObjects.length = 0;
+            for (let x = -terrainRange; x < terrainRange; x += terrainSpacing) {
+                const rand = Math.random();
+                const offset = (Math.random() - 0.5) * 100;
+                if (rand < 0.3) {
+                    terrainObjects.push({ type: 'tree', x: x + offset, z: Math.random() });
+                } else if (rand < 0.5) {
+                    terrainObjects.push({ type: 'bush', x: x + offset, z: Math.random() });
+                } else if (rand < 0.65) {
+                    terrainObjects.push({ type: 'rock', x: x + offset, z: Math.random() });
+                } else if (rand < 0.85) {
+                    terrainObjects.push({ type: 'flower', x: x + offset, z: Math.random() });
+                }
+            }
+            // Sort by z for depth
+            terrainObjects.sort((a, b) => a.z - b.z);
+        }
+
+        function drawMountains() {
+            const ctx = mountainsCanvas.getContext('2d');
+            const w = mountainsCanvas.width;
+            const h = mountainsCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw mountain silhouettes
+            const mountainData = [
+                { x: 0, height: 0.7, width: 400, color: '#5a7a9a' },
+                { x: 300, height: 0.9, width: 500, color: '#4a6a8a' },
+                { x: 700, height: 0.6, width: 350, color: '#6a8aaa' },
+                { x: 1000, height: 0.8, width: 450, color: '#5a7a9a' },
+                { x: 1400, height: 0.65, width: 380, color: '#6a8aaa' },
+            ];
+
+            const cycleWidth = 1800;
+            const offset = worldX * parallaxSpeeds.mountains;
+
+            // Draw each mountain, potentially multiple times to cover screen
+            mountainData.forEach(m => {
+                // Calculate base position with offset
+                let baseX = m.x - (offset % cycleWidth);
+
+                // Draw this mountain at multiple positions to ensure seamless wrapping
+                for (let shift = -cycleWidth; shift <= w + cycleWidth; shift += cycleWidth) {
+                    const mx = baseX + shift;
+
+                    // Only draw if potentially visible
+                    if (mx > -m.width && mx < w + m.width) {
+                        ctx.fillStyle = m.color;
+                        ctx.beginPath();
+                        ctx.moveTo(mx, h);
+                        ctx.lineTo(mx + m.width / 2, h - h * m.height);
+                        ctx.lineTo(mx + m.width, h);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // Snow cap
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        const peakX = mx + m.width / 2;
+                        const peakY = h - h * m.height;
+                        ctx.moveTo(peakX, peakY);
+                        ctx.lineTo(peakX - 30, peakY + 40);
+                        ctx.lineTo(peakX + 30, peakY + 40);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+            });
+        }
+
+        function drawHills() {
+            const ctx = hillsCanvas.getContext('2d');
+            const w = hillsCanvas.width;
+            const h = hillsCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const offset = (worldX * parallaxSpeeds.hills) % 1200;
+
+            // Draw rolling hills
+            ctx.fillStyle = '#5a9a4a';
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            for (let x = 0; x <= w + 200; x += 10) {
+                const baseX = x + offset;
+                const y = h - 50 - Math.sin((baseX) * 0.01) * 30 - Math.sin((baseX) * 0.005) * 50;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+
+            // Darker hills in front
+            ctx.fillStyle = '#4a8a3a';
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            for (let x = 0; x <= w + 200; x += 10) {
+                const baseX = x + offset * 1.5;
+                const y = h - 20 - Math.sin((baseX + 500) * 0.008) * 25 - Math.sin((baseX) * 0.012) * 35;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawGroundDetails() {
+            const ctx = groundDetails.getContext('2d');
+            const w = groundDetails.width;
+            const h = groundDetails.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const offset = (worldX * parallaxSpeeds.ground) % 200;
+
+            // Draw grass tufts
+            ctx.strokeStyle = '#2d6b1e';
+            ctx.lineWidth = 2;
+            for (let x = -50; x < w + 100; x += 30) {
+                const bx = x - (offset % 30);
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(bx + i * 5, h);
+                    ctx.quadraticCurveTo(bx + i * 5 - 5, h - 15, bx + i * 5 - 3, h - 25);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw ground lines for depth
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = -100; x < w + 200; x += 80) {
+                const lx = x - (offset % 80);
+                ctx.beginPath();
+                ctx.moveTo(lx, 10);
+                ctx.lineTo(lx + 60, 10);
+                ctx.stroke();
+            }
+        }
+
+        function updateTerrain() {
+            terrain.innerHTML = '';
+            const screenWidth = window.innerWidth;
+            const groundBottom = window.innerHeight * 0.25;
+
+            terrainObjects.forEach(obj => {
+                const screenX = obj.x - worldX * parallaxSpeeds.terrain;
+
+                // Only render if on screen (with buffer)
+                if (screenX > -100 && screenX < screenWidth + 100) {
+                    const el = document.createElement('div');
+                    el.className = `terrain-object ${obj.type}`;
+                    el.style.left = screenX + 'px';
+                    // Place at varying heights based on z (depth)
+                    const bottomOffset = groundBottom - 10 - obj.z * 30;
+                    el.style.bottom = bottomOffset + 'px';
+                    el.style.zIndex = Math.floor(obj.z * 100);
+
+                    // Scale based on depth
+                    const depthScale = 0.7 + obj.z * 0.5;
+                    el.style.transform = `scale(${depthScale})`;
+
+                    terrain.appendChild(el);
+                }
+            });
+        }
+
+        function resizeCanvases() {
+            const w = window.innerWidth;
+            mountainsCanvas.width = w;
+            mountainsCanvas.height = window.innerHeight * 0.4;
+            hillsCanvas.width = w;
+            hillsCanvas.height = window.innerHeight * 0.35;
+            groundDetails.width = w;
+            groundDetails.height = window.innerHeight * 0.25;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                keys[e.key] = true;
+            }
+            keys['Shift'] = e.shiftKey;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            keys['Shift'] = e.shiftKey;
+        });
+
+        // Mobile touch controls
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnJump = document.getElementById('btn-jump');
+
+        function setupTouchButton(element, keyName) {
+            // Touch start
+            element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[keyName] = true;
+                element.classList.add('active');
+            }, { passive: false });
+
+            // Touch end
+            element.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+                element.classList.remove('active');
+            }, { passive: false });
+
+            // Touch cancel (finger slides off)
+            element.addEventListener('touchcancel', (e) => {
+                keys[keyName] = false;
+                element.classList.remove('active');
+            });
+
+            // Prevent context menu on long press
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        }
+
+        setupTouchButton(btnLeft, 'ArrowLeft');
+        setupTouchButton(btnRight, 'ArrowRight');
+        setupTouchButton(btnJump, 'ArrowUp');
+
+        // Handle orientation changes
+        function checkOrientation() {
+            if ('orientation' in screen && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {
+                    // Silently fail - browser may not support it
+                });
+            }
+        }
+
+        // Try to lock orientation on load and fullscreen
+        checkOrientation();
+        document.addEventListener('fullscreenchange', checkOrientation);
+
+        // Prevent pull-to-refresh and bounce scrolling on iOS
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#touch-controls')) return;
+            e.preventDefault();
+        }, { passive: false });
+
+        function setWalkFrame(frameIndex) {
+            const frame = walkFrames[frameIndex];
+            // Apply both sprite scale (0.5) and responsive scale
+            const totalScale = walkScale * responsiveScale;
+            character.style.backgroundPosition = `-${frame.x * totalScale}px -${frame.y * totalScale}px`;
+        }
+
+        function setJumpFrame(frameIndex) {
+            const frame = jumpFrames[frameIndex];
+            // Apply both sprite scale (0.25) and responsive scale
+            const totalScale = jumpScale * responsiveScale;
+            character.style.backgroundPosition = `-${frame.x * totalScale}px -${frame.y * totalScale}px`;
+        }
+
+        function setAnimationMode(mode) {
+            character.classList.remove('walk', 'jump');
+            character.classList.add(mode);
+        }
+
+        function updateCharacterPosition() {
+            // Character stays centered horizontally, anchored by feet at ground level
+            const charWidth = isJumping ? jumpWidth : walkWidth;
+            const charHeight = isJumping ? jumpHeight : walkHeight;
+            const screenX = (window.innerWidth - charWidth) / 2;
+            // Ground level is based on walk height, so feet stay consistent
+            const groundY = window.innerHeight - window.innerHeight * 0.15;
+            const screenY = groundY - charHeight - charY;
+            character.style.left = screenX + 'px';
+            character.style.top = screenY + 'px';
+            positionDisplay.textContent = `World: ${Math.round(worldX)}, Height: ${Math.round(charY)}`;
+
+            if (facingLeft) {
+                character.classList.add('facing-left');
+            } else {
+                character.classList.remove('facing-left');
+            }
+
+            // Update trampoline position (scrolls with world)
+            const trampolineScreenX = trampolineWorldX - worldX + (window.innerWidth / 2) - (trampolineWidth / 2);
+            const trampolineScreenY = groundY - trampolineHeight + 50;
+            trampolineEl.style.left = trampolineScreenX + 'px';
+            trampolineEl.style.top = trampolineScreenY + 'px';
+        }
+
+        function gameLoop(timestamp) {
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // If won, run win animation
+            if (hasWon) {
+                updateWinAnimation(deltaTime);
+                drawMountains();
+                drawHills();
+                drawGroundDetails();
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const currentSpeed = keys['Shift'] ? fastSpeed : speed;
+            let moved = false;
+            let wantsToJump = keys['ArrowUp'];
+
+            if (keys['ArrowLeft']) {
+                worldX -= currentSpeed;
+                facingLeft = true;
+                moved = true;
+            }
+            if (keys['ArrowRight']) {
+                worldX += currentSpeed;
+                facingLeft = false;
+                moved = true;
+            }
+            if (keys['ArrowDown']) {
+                worldY += currentSpeed;
+                moved = true;
+            }
+
+            // Physics - check if on trampoline
+            const charCenterX = worldX;
+            const onTrampoline = Math.abs(charCenterX - trampolineWorldX) < (trampolineWidth / 2 - 50);
+            const trampolineTop = 100; // Height of trampoline surface above ground
+
+            // Handle jump initiation
+            if (wantsToJump && canJump && !isInAir) {
+                // Start jump
+                isInAir = true;
+                canJump = false;
+                velocityY = jumpVelocity;
+
+                // Start jump animation
+                if (!isJumping) {
+                    isJumping = true;
+                    jumpFrame = 0;
+                    animationTimer = 0;
+                    setAnimationMode('jump');
+                    setJumpFrame(0);
+                }
+            }
+
+            // Reset canJump when key released
+            if (!wantsToJump) {
+                canJump = true;
+            }
+
+            // Apply gravity
+            if (isInAir) {
+                velocityY += gravity;
+                charY += velocityY;
+
+                // Check trampoline collision (falling down onto it)
+                const prevCharY = charY - velocityY;
+                if (onTrampoline && velocityY < 0 && prevCharY >= trampolineTop && charY <= trampolineTop) {
+                    // Landing on trampoline!
+                    charY = trampolineTop;
+
+                    // Bounce decay - reset if too much time passed
+                    if (timestamp - lastBounceTime > bounceDecayTime) {
+                        bounceMultiplier = 1;
+                    }
+
+                    // Calculate bounce - convert fall speed to upward speed + multiplier bonus
+                    const fallSpeed = Math.abs(velocityY);
+                    bounceMultiplier += 0.5;
+                    bounceCount++;
+                    lastBounceTime = timestamp;
+
+                    // Check for win condition - 7 bounces in a row!
+                    if (bounceCount >= 7 && !hasWon) {
+                        triggerWin();
+                        requestAnimationFrame(gameLoop);
+                        return;
+                    }
+
+                    // Bounce back up - preserve momentum and add trampoline boost
+                    const bounceVelocity = fallSpeed * 1.15 + (bounceMultiplier * 2);
+                    velocityY = bounceVelocity;
+
+                    // Visual feedback - compress surface based on impact
+                    trampolineSurface.classList.add('compressed');
+                    const compressionTime = Math.min(200, 80 + fallSpeed * 5);
+                    setTimeout(() => trampolineSurface.classList.remove('compressed'), compressionTime);
+
+                    // Screen shake on big bounces
+                    if (bounceMultiplier > 2) {
+                        shakeScreen(Math.min(20, bounceMultiplier * 3));
+                    }
+
+                    // Play a "boing" effect by wobbling the trampoline
+                    trampolineEl.style.transition = 'transform 0.1s ease-out';
+                    trampolineEl.style.transform = `scaleY(0.8) scaleX(1.1)`;
+                    setTimeout(() => {
+                        trampolineEl.style.transform = `scaleY(1.1) scaleX(0.95)`;
+                        setTimeout(() => {
+                            trampolineEl.style.transform = '';
+                        }, 100);
+                    }, 100);
+                }
+                // Check ground collision (falling down)
+                else if (charY <= 0 && velocityY < 0) {
+                    charY = 0;
+                    velocityY = 0;
+                    isInAir = false;
+                    bounceMultiplier = 1; // Reset bounce when landing on ground
+                    bounceCount = 0; // Reset bounce count
+
+                    // End jump animation when landing
+                    if (isJumping && jumpFrame >= jumpFrames.length - 2) {
+                        isJumping = false;
+                        jumpFrame = 0;
+                        setAnimationMode('walk');
+                        setWalkFrame(idleFrame);
+                    }
+                }
+            }
+
+            // Jump animation - map frames to jump arc
+            if (isJumping) {
+                // Frames 0-2: going up, Frame 3: floating/falling, Frames 4-6: landing
+                let targetFrame;
+
+                if (velocityY > 10) {
+                    targetFrame = 0; // Strong upward
+                } else if (velocityY > 4) {
+                    targetFrame = 1; // Medium upward
+                } else if (velocityY > 0) {
+                    targetFrame = 2; // Slow upward
+                } else if (charY > 80) {
+                    // Still high up - stay on frame 3 (floating)
+                    targetFrame = 3;
+                } else if (charY > 50) {
+                    // Getting close to ground - frame 4
+                    targetFrame = 4;
+                } else if (charY > 20) {
+                    // Very close - frame 5
+                    targetFrame = 5;
+                } else {
+                    // About to land - frame 6
+                    targetFrame = 6;
+                }
+
+                if (jumpFrame !== targetFrame) {
+                    jumpFrame = targetFrame;
+                    setJumpFrame(Math.min(jumpFrame, jumpFrames.length - 1));
+                }
+
+                // End jump when landed
+                if (!isInAir) {
+                    isJumping = false;
+                    jumpFrame = 0;
+                    setAnimationMode('walk');
+                    if (moved) {
+                        setWalkFrame(currentFrame);
+                    } else {
+                        currentFrame = idleFrame;
+                        setWalkFrame(idleFrame);
+                    }
+                }
+                idleTimer = 0;
+            } else if (moved) {
+                isMoving = true;
+                idleTimer = 0;
+                animationTimer += deltaTime;
+                if (animationTimer >= walkFrameDelay) {
+                    animationTimer = 0;
+                    currentFrame = (currentFrame + 1) % walkFrames.length;
+                    setWalkFrame(currentFrame);
+                }
+            } else {
+                if (isMoving) {
+                    isMoving = false;
+                    idleTimer = 0;
+                }
+                idleTimer += deltaTime;
+                if (idleTimer >= idleDelay && currentFrame !== idleFrame) {
+                    currentFrame = idleFrame;
+                    setWalkFrame(idleFrame);
+                }
+            }
+
+            // Apply screen shake
+            if (screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * screenShake;
+                const shakeY = (Math.random() - 0.5) * screenShake;
+                gameContainer.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+                screenShake *= 0.9; // Decay
+                if (screenShake < 0.5) {
+                    screenShake = 0;
+                    gameContainer.style.transform = '';
+                }
+            }
+
+
+            // Update parallax backgrounds
+            drawMountains();
+            drawHills();
+            drawGroundDetails();
+            updateTerrain();
+            updateCharacterPosition();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateResponsiveSizes() {
+            responsiveScale = getResponsiveScale();
+
+            // Update character sizes
+            walkWidth = baseWalkWidth * responsiveScale;
+            walkHeight = baseWalkHeight * responsiveScale;
+            jumpWidth = baseJumpWidth * responsiveScale;
+            jumpHeight = baseJumpHeight * responsiveScale;
+
+            // Update trampoline sizes
+            trampolineWidth = baseTrampolineWidth * responsiveScale;
+            trampolineHeight = baseTrampolineHeight * responsiveScale;
+
+            // Update CSS variables for sprite rendering
+            const root = document.documentElement;
+            root.style.setProperty('--walk-width', walkWidth + 'px');
+            root.style.setProperty('--walk-height', walkHeight + 'px');
+            root.style.setProperty('--walk-bg-width', (432 * responsiveScale) + 'px');
+            root.style.setProperty('--walk-bg-height', (592 * responsiveScale) + 'px');
+            root.style.setProperty('--jump-width', jumpWidth + 'px');
+            root.style.setProperty('--jump-height', jumpHeight + 'px');
+            root.style.setProperty('--jump-bg-width', (380 * responsiveScale) + 'px');
+            root.style.setProperty('--jump-bg-height', (631 * responsiveScale) + 'px');
+
+            // Update trampoline DOM element scale
+            trampolineEl.style.transform = `scale(${responsiveScale})`;
+            trampolineEl.style.transformOrigin = 'bottom left';
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvases();
+            updateResponsiveSizes();
+            updateCharacterPosition();
+        });
+
+        // Initialize
+        generateTerrainObjects();
+        resizeCanvases();
+        updateResponsiveSizes();
+        currentFrame = idleFrame;
+        setAnimationMode('walk');
+        setWalkFrame(idleFrame);
+        updateCharacterPosition();
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
