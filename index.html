@@ -104,8 +104,6 @@
             height: var(--jump-height, 270px);
             background-image: url('assets/images/jude-jump-transparent.png');
             background-size: var(--jump-bg-width, 380px) var(--jump-bg-height, 631px);
-            /* DEBUG: red background to see element position */
-            background-color: rgba(255, 0, 0, 0.3);
         }
 
         #character.facing-left {
@@ -519,11 +517,10 @@
         const idleFrame = 4;
 
         // Responsive scaling factor based on viewport
-        // On mobile, don't scale down - keep character at reasonable size
-        const baseViewportWidth = 800; // Design reference width (lowered for mobile)
+        const baseViewportWidth = 1000; // Design reference width
         function getResponsiveScale() {
-            // Don't scale below 0.8 even on small screens
-            return Math.min(1, Math.max(0.8, window.innerWidth / baseViewportWidth));
+            // Allow scaling down to 0.5 on mobile for wider view
+            return Math.min(1, Math.max(0.5, window.innerWidth / baseViewportWidth));
         }
         let responsiveScale = getResponsiveScale();
 
