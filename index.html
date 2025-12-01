@@ -517,10 +517,10 @@
         const idleFrame = 4;
 
         // Responsive scaling factor based on viewport
-        const baseViewportWidth = 1000; // Design reference width
+        const baseViewportWidth = 800; // Design reference width
         function getResponsiveScale() {
-            // Allow scaling down to 0.5 on mobile for wider view
-            return Math.min(1, Math.max(0.5, window.innerWidth / baseViewportWidth));
+            // Keep minimum at 0.8 to prevent sprite rendering issues
+            return Math.min(1, Math.max(0.8, window.innerWidth / baseViewportWidth));
         }
         let responsiveScale = getResponsiveScale();
 
