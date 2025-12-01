@@ -104,6 +104,8 @@
             height: var(--jump-height, 270px);
             background-image: url('assets/images/jude-jump-transparent.png');
             background-size: var(--jump-bg-width, 380px) var(--jump-bg-height, 631px);
+            /* DEBUG: red background to see element position */
+            background-color: rgba(255, 0, 0, 0.3);
         }
 
         #character.facing-left {
@@ -974,7 +976,7 @@
 
         function setJumpFrame(frameIndex) {
             const frame = jumpFrames[frameIndex];
-            // Apply both sprite scale (0.25) and responsive scale
+            // Apply both sprite scale (0.25) and responsive scale to match background-size
             const totalScale = jumpScale * responsiveScale;
             character.style.backgroundPosition = `-${frame.x * totalScale}px -${frame.y * totalScale}px`;
         }
