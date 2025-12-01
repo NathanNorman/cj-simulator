@@ -44,7 +44,14 @@
         #mountains {
             bottom: 30%;
             top: auto;
-            height: 40%;
+            height: 50%;
+        }
+
+        @media (max-width: 900px) and (orientation: landscape) {
+            #mountains {
+                bottom: 25%;
+                height: 55%;
+            }
         }
 
         #hills {
@@ -510,10 +517,11 @@
         const idleFrame = 4;
 
         // Responsive scaling factor based on viewport
-        const baseViewportWidth = 1200; // Design reference width
+        // On mobile, don't scale down - keep character at reasonable size
+        const baseViewportWidth = 800; // Design reference width (lowered for mobile)
         function getResponsiveScale() {
-            // Scale down on smaller screens, but don't scale up beyond 1
-            return Math.min(1, Math.max(0.5, window.innerWidth / baseViewportWidth));
+            // Don't scale below 0.8 even on small screens
+            return Math.min(1, Math.max(0.8, window.innerWidth / baseViewportWidth));
         }
         let responsiveScale = getResponsiveScale();
 
@@ -612,9 +620,12 @@
                         winPhase = 'landing';
 
                         // Find a mountain peak position - pick one near center of screen
-                        // Mountains canvas: bottom 30%, height 40% of screen
-                        const mountainsCanvasTop = window.innerHeight * 0.30;
-                        const mountainsCanvasHeight = window.innerHeight * 0.40;
+                        // Mountains canvas positioning (matches CSS and resizeCanvases logic)
+                        const w = window.innerWidth;
+                        const h = window.innerHeight;
+                        const isMobileLandscape = w <= 900 && w > h;
+                        const mountainsCanvasTop = isMobileLandscape ? h * 0.45 : h * 0.50;
+                        const mountainsCanvasHeight = isMobileLandscape ? h * 0.55 : h * 0.50;
 
                         // Mountain data (same as in drawMountains)
                         const mountainData = [
@@ -875,8 +886,11 @@
 
         function resizeCanvases() {
             const w = window.innerWidth;
+            const h = window.innerHeight;
             mountainsCanvas.width = w;
-            mountainsCanvas.height = window.innerHeight * 0.4;
+            // Use larger mountain canvas on mobile landscape
+            const isMobileLandscape = w <= 900 && w > h;
+            mountainsCanvas.height = isMobileLandscape ? h * 0.55 : h * 0.5;
             hillsCanvas.width = w;
             hillsCanvas.height = window.innerHeight * 0.35;
             groundDetails.width = w;
